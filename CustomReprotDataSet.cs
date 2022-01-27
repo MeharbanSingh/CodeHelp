@@ -1,13 +1,13 @@
-    1 	// **************************************************
-    2 	// Custom code for AC_CustomerStatementReportForm
-    3 	// Created: 2/17/2016 12:42:57 PM
-    4 	// **************************************************
-    5 	using System;
-    6 	using System.ComponentModel;
-    7 	using System.Data;
-    8 	using System.Diagnostics;
-    9 	using System.Windows.Forms;
-   10 	using Erp.Adapters;
+     	// **************************************************
+     	// Custom code for AC_CustomerStatementReportForm
+     	// Created: 2/17/2016 12:42:57 PM
+     	// **************************************************
+	using System;
+     	using System.ComponentModel;
+     	using System.Data;
+     	using System.Diagnostics;
+     	using System.Windows.Forms;
+    	using Erp.Adapters;
    11 	using Erp.BO;
    12 	using Erp.UI;
    13 	using Ice.Lib;
