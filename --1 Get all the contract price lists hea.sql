@@ -134,7 +134,7 @@ SELECT	    '10GAL' Company,
 			LEFT OUTER JOIN #uomConv uomconv ON uomconv.ClassId = m.UOMClassID AND uomconv.Uom = m.UOM
 			LEFT OUTER JOIN #pqb pqb ON pqb.PartNum = m.PartNum 
 			LEFT OUTER JOIN Erp.PartUOM puom ON puom.Company = m.Company AND puom.PartNum = m.PartNum AND puom.UOMCode = m.UOM AND uomconv.PartSpecific = 1
-	WHERE	pl.Company = '10GAL' and m.costPlusMarkUp >0
+	WHERE	pl.Company = @Company and m.costPlusMarkUp >0
 			ORDER BY m.PartNum, m.UOM, [Quantity]
 
 
