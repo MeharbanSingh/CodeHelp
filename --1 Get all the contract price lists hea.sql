@@ -1,22 +1,22 @@
---1 Get all the contract price lists header.
---2 Delete all the Non contracted price list part.
---3 Add all the new part to the list with new working cost
---4 updat the price of contracted Parts 
---5 update start and end date of price list to the next month
+CREATE PROCEDURE [Erp].[PbsHousingAndBuilderContractsPriceList]
+	@Company NVARCHAR(10)
+	--@UserId NVARCHAR(50),
+AS
+BEGIN
 
 
 -- Get the Housing and Building price list
-Drop Table IF EXISTS #ContractedPricelist
-Drop Table IF EXISTS #matrix
-Drop Table IF EXISTS #uomConv
-Drop Table IF EXISTS #pqb
-Drop Table IF EXISTS #StaginPriceLstParts
-GO
+--Drop Table IF EXISTS #ContractedPricelist
+--Drop Table IF EXISTS #matrix
+--Drop Table IF EXISTS #uomConv
+--Drop Table IF EXISTS #pqb
+--Drop Table IF EXISTS #StaginPriceLstParts
+--GO
 
 DECLARE @zero DECIMAL = 0;
 Declare @SalesRegion as nvarchar(8) ='10';
 Declare @CostGroup as nvarchar(8)='10';
-Declare @Company as nvarchar(8)='10GAL';
+--Declare @Company as nvarchar(8)='10GAL';
 Declare @FirstDayOfNextMonth as date = Convert(date,Dateadd(dd,1 - DATEPART(dd,getdate()), DATEADD(mm,1,getdate())),103);
 Declare @LastDayOfNextMonth as date = Convert(date,Dateadd(dd,-1,Dateadd(dd,1 - DATEPART(dd,getdate()), DATEADD(mm,2,getdate()))),103);
 
@@ -28,19 +28,23 @@ INTO #ContractedPricelist
 from dbo.PriceLst pl
 LEFT JOIN dbo.CustomerPriceLst CPL on CPL.Company=Pl.Company and CPL.ListCode=PL.ListCode
 LEFT JOIN dbo.Customer c on c.Company=CPL.Company and c.CustNum=CPL.CustNum
-where pl.ListCode like 'H%'  or pl.ListCode like 'Q%' and c.PbsBuilder_c=1
+where pl.ListCode like 'H%'  or pl.ListCode like 'Q%' and c.PbsBuilder_c=1 
 
---update start date and End date
+
 
 Update pl set pl.StartDate = @FirstDayOfNextMonth,pl.EndDate=@LastDayOfNextMonth
 from Erp.PriceLst pl
 inner join #ContractedPricelist cpl on cpl.Company=pl.Company and cpl.ListCode=pl.ListCode
 
 --Delete Non contracted Part from Housing and Building price list
-Select count(PLP.PartNum) --Delete PLP
-from dbo.PriceLstParts PLP
+Delete PLP
+from Erp.PriceLstParts PLP
+inner join Erp.PriceLstParts_UD PLPUD on PLPUD.ForeignSysRowID=PLP.SysRowID
 inner join #ContractedPricelist CPL on PLP.Company = CPL.Company and PLP.ListCode=CPL.ListCode
-where PLP.PbsContractedItem_c =0 --and CPL.ListCode='H_BUN_2690'
+where PLPUD.PbsContractedItem_c =0 
+
+
+
 
 
 
@@ -73,9 +77,9 @@ SELECT	    '10GAL' Company,
 		      and Convert(date,ud4.key3,103) =(Select max(Convert(date,u.key3,103)) from ice.UD04 u where u.Company=p.Company and u.Key2=p.PartNum and CONVERT(date,u.Key3,103)<= GETDATE() and  u.Key1=@CostGroup   )
             LEFT OUTER JOIN Ice.UD04 ud4_2 on ud4_2.Company=p.Company and ud4_2.Key2=p.PartNum and  ud4_2.Key1='10' 
 		      and Convert(date,ud4_2.Key3,103) =(Select max(Convert(date,ur.key3,103)) from ice.UD04 ur where ur.Company=p.Company and ur.Key2=p.PartNum and CONVERT(date,ur.Key3,103)<= GETDATE() and  ur.Key1='10'  )
-			 WHERE	sm.RegionCode = @SalesRegion AND pgc.UOMClass = p.UOMClassID and p.PartNum='TAAL0041'  --and cpm.BuyCode='26'
+			 WHERE	sm.RegionCode = @SalesRegion AND pgc.UOMClass = p.UOMClassID --and p.PartNum='TAAL0041'  --and cpm.BuyCode='26'
 
-		
+
 
 
 			 -- Load UOM Conversions into mem table
@@ -111,8 +115,6 @@ SELECT	    '10GAL' Company,
 	   AND	PbsPriceListQtyBreaks_c != ''
 	   and  p.InActive=0
 
-
-
 	   
 	   SELECT 	 pl.Company
 	       ,pl.ListCode
@@ -134,29 +136,34 @@ SELECT	    '10GAL' Company,
 			LEFT OUTER JOIN #uomConv uomconv ON uomconv.ClassId = m.UOMClassID AND uomconv.Uom = m.UOM
 			LEFT OUTER JOIN #pqb pqb ON pqb.PartNum = m.PartNum 
 			LEFT OUTER JOIN Erp.PartUOM puom ON puom.Company = m.Company AND puom.PartNum = m.PartNum AND puom.UOMCode = m.UOM AND uomconv.PartSpecific = 1
-	WHERE	pl.Company = @Company and m.costPlusMarkUp >0
+	WHERE	pl.Company = @Company --and m.costPlusMarkUp >0
 			ORDER BY m.PartNum, m.UOM, [Quantity]
 
 
-Select pl.BasePrice,spl.BasePrice --Update pl set pl.BasePrice=spl.BasePrice
+
+Update pl set pl.BasePrice=spl.BasePrice
 from Erp.PriceLstParts pl
-inner join dbo.PriceLstParts plp on plp.Company=pl.Company and plp.ListCode=pl.ListCode and plp.PartNum=pl.PartNum
-inner join #StaginPriceLstParts spl on spl.Company=plp.Company and spl.ListCode=plp.ListCode and spl.PartNum=plp.PartNum
-where plp.PbsContractedItem_c=1
-	--		INSERT INTO [Erp].[PriceLstParts] (
-	--	[Company],
-	--	[GlobalPriceLstParts], [GlobalLock],
-	--	[ListCode],
-	--	[PartNum],
-	--	[BasePrice],
-	--	[CommentText],
-	--	[UOMCode],
-	--	[QtyBreak1], [UnitPrice1],
-	--	[QtyBreak2], [UnitPrice2],
-	--	[QtyBreak3], [UnitPrice3],
-	--	[QtyBreak4], [UnitPrice4],
-	--	[QtyBreak5], [UnitPrice5]
-	--)
+inner join Erp.PriceLstParts_UD plpud on plpud.ForeignSysRowID=pl.SysRowID
+inner join #StaginPriceLstParts spl on spl.Company=pl.Company and spl.ListCode=pl.ListCode and spl.PartNum=pl.PartNum and spl.UOMCode=pl.UOMCode
+where plpud.PbsContractedItem_c=1 
+
+
+
+
+	 INSERT INTO [Erp].[PriceLstParts] (
+		[Company],
+		[GlobalPriceLstParts], [GlobalLock],
+		[ListCode],
+		[PartNum],
+		[BasePrice],
+		[CommentText],
+		[UOMCode],
+		[QtyBreak1], [UnitPrice1],
+		[QtyBreak2], [UnitPrice2],
+		[QtyBreak3], [UnitPrice3],
+		[QtyBreak4], [UnitPrice4],
+		[QtyBreak5], [UnitPrice5]
+	)
 	SELECT	spl.[Company]
 		 ,	0, 0
 		 ,	spl.[ListCode]
@@ -164,30 +171,24 @@ where plp.PbsContractedItem_c=1
 		 ,	spl.[BasePrice]
 		 ,	''
 		 ,	spl.[UOMCode]
-		 ,	 0
-		 ,	 0
-		 ,	 0
-		 ,	 0
-		 ,	 0
+		 ,	 0,0
+		 ,	 0,0
+		 ,	 0,0
+		 ,	 0,0
+		 ,   0,0
 	  FROM	#StaginPriceLstParts spl
-	  inner join dbo.PriceLstParts plp on plp.Company=spl.Company and plp.ListCode= spl.ListCode and plp.PartNum = spl.PartNum and plp.UOMCode=spl.UOMCode
-      where plp.PbsContractedItem_c=0
+	  WHERE NOT EXISTS (Select plp.Company,plp.ListCode,plp.PartNum,plp.UOMCode from Erp.PriceLstParts plp where plp.Company=spl.Company and plp.ListCode= spl.ListCode and plp.PartNum = spl.PartNum and plp.UOMCode=spl.UOMCode)
+ 
 		
 
-	 --INSERT INTO [Erp].[PriceLstParts_UD] (
-	 --     [ForeignSysRowID],
-		--  [PbsContractedItem_c]
-  --                           )
+	 INSERT INTO [Erp].[PriceLstParts_UD] (
+	      [ForeignSysRowID],
+		  [PbsContractedItem_c]
+                             )
 	 SELECT plp.SysRowID,
 	        0
-	 FROM #StaginPriceLstParts spl
-	 inner join dbo.PriceLstParts plp on plp.Company=spl.Company and plp.ListCode= spl.ListCode and plp.PartNum = spl.PartNum and plp.UOMCode=spl.UOMCode
-	 where plp.PbsContractedItem_c=0
-	 
+	 FROM Erp.PriceLstParts plp 
+	 where NOT EXISTS (Select * FROM Erp.PriceLstParts_UD plpUD where plpUD.ForeignSysRowID=plp.SysRowID)
 
 
-
-
-			
-
-
+	 END
